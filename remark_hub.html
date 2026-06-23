@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RemarkHub | Risk Panel</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@700;800&family=JetBrains+Mono:wght@700;800&display=swap');
 
         :root {
             --bg: #0f1318;
@@ -267,6 +267,77 @@
         @keyframes dotBlink {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
+        }
+
+        /* China Clock — header right */
+        .cn-clock {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 6px;
+            font-family: 'Space Grotesk', 'Inter', sans-serif;
+            font-weight: 800;
+            font-size: 1.3rem;
+            letter-spacing: -0.5px;
+            color: var(--text-main);
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .cn-clock-flag {
+            font-size: 0.95rem;
+            line-height: 1;
+            filter: drop-shadow(0 0 4px var(--accent-glow));
+        }
+
+        .cn-clock-time {
+            font-family: 'JetBrains Mono', 'Space Grotesk', monospace;
+            font-weight: 700;
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 10px var(--accent-glow);
+            display: inline-flex;
+        }
+
+        .cn-clock-digit {
+            display: inline-block;
+            transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
+        }
+
+        .cn-clock-digit.flip {
+            animation: digitFlip 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes digitFlip {
+            0% { transform: translateY(0); opacity: 1; }
+            40% { transform: translateY(-6px); opacity: 0.3; }
+            60% { transform: translateY(4px); }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        .cn-clock-colon {
+            display: inline-block;
+            animation: colonPulse 1s step-start infinite;
+            color: var(--accent);
+            margin: 0 1px;
+        }
+
+        @keyframes colonPulse {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.25; }
+        }
+
+        .cn-clock-label {
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: var(--text-dim);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            align-self: center;
+        }
+
+        @media (max-width: 480px) {
+            .cn-clock { font-size: 1.05rem; gap: 4px; }
+            .cn-clock-label { display: none; }
         }
 
         /* Side Overlay */
@@ -781,7 +852,11 @@
         </div>
         <span class="logo-remark">Remark</span><span class="logo-hub">Hub</span><span class="logo-dot"></span>
     </div>
-    <div style="width:36px;"></div>
+    <div class="cn-clock" id="cnClock">
+        <span class="cn-clock-flag">🇨🇳</span>
+        <span class="cn-clock-time" id="cnClockTime"></span>
+        <span class="cn-clock-label">CN</span>
+    </div>
 </header>
 
 <div class="tab-nav">
@@ -1119,6 +1194,41 @@
     updateTGNumbers();
     renderList('tg');
     renderList('risk');
+
+    // China Clock (Asia/Shanghai, UTC+8) — 24h with per-digit flip animation
+    (function initChinaClock() {
+        const timeEl = document.getElementById('cnClockTime');
+        if (!timeEl) return;
+        let prevStr = '';
+
+        function getChinaParts() {
+            const fmt = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Shanghai',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+            });
+            const parts = fmt.formatToParts(new Date());
+            const get = (t) => parts.find(p => p.type === t)?.value || '00';
+            return { h: get('hour'), m: get('minute'), s: get('second') };
+        }
+
+        function render() {
+            const { h, m, s } = getChinaParts();
+            const str = `${h}${m}${s}`;
+            const chars = [...h, ':', ...m, ':', ...s];
+            const prevChars = prevStr ? [...prevStr] : [];
+
+            timeEl.innerHTML = chars.map((ch, i) => {
+                if (ch === ':') return `<span class="cn-clock-colon">:</span>`;
+                const changed = prevChars[i] !== undefined && prevChars[i] !== ch;
+                return `<span class="cn-clock-digit${changed ? ' flip' : ''}">${ch}</span>`;
+            }).join('');
+
+            prevStr = str;
+        }
+
+        render();
+        setInterval(render, 1000);
+    })();
 
     // Scroll handler
     const quickBar = document.querySelector('.quick-bar');
