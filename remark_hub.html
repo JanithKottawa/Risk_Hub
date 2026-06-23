@@ -286,7 +286,6 @@
         .cn-clock-flag {
             font-size: 0.95rem;
             line-height: 1;
-            filter: drop-shadow(0 0 4px var(--accent-glow));
         }
 
         .cn-clock-time {
@@ -298,46 +297,8 @@
             display: inline-flex;
         }
 
-        .cn-clock-digit {
-            display: inline-block;
-            transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
-        }
-
-        .cn-clock-digit.flip {
-            animation: digitFlip 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        @keyframes digitFlip {
-            0% { transform: translateY(0); opacity: 1; }
-            40% { transform: translateY(-6px); opacity: 0.3; }
-            60% { transform: translateY(4px); }
-            100% { transform: translateY(0); opacity: 1; }
-        }
-
-        .cn-clock-colon {
-            display: inline-block;
-            animation: colonPulse 1s step-start infinite;
-            color: var(--accent);
-            margin: 0 1px;
-        }
-
-        @keyframes colonPulse {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.25; }
-        }
-
-        .cn-clock-label {
-            font-size: 0.62rem;
-            font-weight: 700;
-            color: var(--text-dim);
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            align-self: center;
-        }
-
         @media (max-width: 480px) {
             .cn-clock { font-size: 1.05rem; gap: 4px; }
-            .cn-clock-label { display: none; }
         }
 
         /* Side Overlay */
@@ -855,7 +816,6 @@
     <div class="cn-clock" id="cnClock">
         <span class="cn-clock-flag">🇨🇳</span>
         <span class="cn-clock-time" id="cnClockTime"></span>
-        <span class="cn-clock-label">CN</span>
     </div>
 </header>
 
@@ -911,7 +871,10 @@
             "Rejected team. Thanks - rs__",
             "For Further Checking - rs__",
             "Hi team this account is for further review thanks — rs__",
+            "Hi team done rejected due to invalid turnover thank you —rs22",
+            "Hi, team this player is for adjustment thanks - rs16",
             "Hi team as per checking account is for adjustment will be back to active status once adjustment is done. Thank you — rs__",
+            "Hi team, this account will remain inactive as per superior's instructions. Thanks team —rs10",
             "Confirmed fraud activity, cannot back to active as per our superior's instructions, Thanks - rs__",
             "Hi team upon checking this account is  Suspicious betting activities, account under review by Sports Provider and withdrawal on hold until 19th May-2026. Thank you - rs__",
             "Hi team upon checking this account is for further checking. Wait for our superior decision. Thank you - rs__",
@@ -924,14 +887,7 @@
             "MAC - Multiple Account Creation-",
             "HBF - PG Hide Balance Fraud",
             "RAF - RAF Bonus Abuser -",
-            "SUSPICIOUS In Out Fund",
-            "Suspicious bets in Bookmaker Market-SOCCER",
-            "Suspicious Taixiu winning",
-            "Suspicious Fund in Fund out in EVOLUTION Fan Tan",
-            "Suspicious Sports Hedging",
-            "Suspicious Cricket Sports Bets",
-            "Suspicious CF winning",
-            "Suspicious Deposit ",
+            "Suspicious -- Select Type --",
             "Slots FDB Abuser ",
         ]
     };
@@ -1067,6 +1023,30 @@
                     <button class="copy-btn" onclick="triggerCopyBtn(this, copyCDFText)">Copy</button>
                 </div>`;
             }
+            if (text.includes("Suspicious -- Select Type --")) {
+                return `
+                <div class="remark-item">
+                    <div class="input-section">
+                        <div class="cdf-row">
+                            <span class="input-label">Suspicious:</span>
+                            <select id="suspiciousDropdown" class="inline-select" style="width:280px" onchange="updateSuspiciousPreview()">
+                                <option value="">-- Select Type --</option>
+                                <option value="SUSPICIOUS In Out Fund">SUSPICIOUS In Out Fund</option>
+                                <option value="Suspicious bets in Bookmaker Market-SOCCER">Suspicious bets in Bookmaker Market-SOCCER</option>
+                                <option value="Suspicious Taixiu winning">Suspicious Taixiu winning</option>
+                                <option value="Suspicious Fund in Fund out in EVOLUTION Fan Tan">Suspicious Fund in Fund out in EVOLUTION Fan Tan</option>
+                                <option value="Suspicious Sports Hedging">Suspicious Sports Hedging</option>
+                                <option value="Suspicious Cricket Sports Bets">Suspicious Cricket Sports Bets</option>
+                                <option value="Suspicious CF winning">Suspicious CF winning</option>
+                                <option value="Suspicious Deposit">Suspicious Deposit</option>
+                                <option value="Suspicious Fund in Fund out in EVOLUTION Roulette">Suspicious Fund in Fund out in EVOLUTION Roulette</option>
+                            </select>
+                        </div>
+                        <div id="suspiciousPreview" class="cdf-preview"></div>
+                    </div>
+                    <button class="copy-btn" onclick="triggerCopyBtn(this, copySuspiciousText)">Copy</button>
+                </div>`;
+            }
             return `
             <div class="remark-item">
                 <span class="remark-text">${text}</span>
@@ -1133,6 +1113,19 @@
         copyText(text);
     }
 
+    function updateSuspiciousPreview() {
+        const value = document.getElementById('suspiciousDropdown')?.value || '';
+        const preview = document.getElementById('suspiciousPreview');
+        if (!preview) return;
+        preview.textContent = value ? '✓ Preview: ' + value : '';
+    }
+
+    function copySuspiciousText() {
+        const value = document.getElementById('suspiciousDropdown')?.value || '';
+        if (!value) { notify("Please select a type!"); return; }
+        copyText(value);
+    }
+
     function openModal() {
         modalTitle.textContent = "Add New Item";
         modalInput.value = "";
@@ -1168,7 +1161,10 @@
         "Rejected team. Thanks - rs__",
         "For Further Checking - rs__",
         "Hi team this account is for further review thanks — rs__",
+        "Hi team done rejected due to invalid turnover thank you —rs22",
+        "Hi, team this player is for adjustment thanks - rs16",
         "Hi team as per checking account is for adjustment will be back to active status once adjustment is done. Thank you — rs__",
+        "Hi team, this account will remain inactive as per superior's instructions. Thanks team —rs10",
         "Confirmed fraud activity, cannot back to active as per our superior's instructions, Thanks - rs__",
         "Hi team upon checking this account is  Suspicious betting activities, account under review by Sports Provider and withdrawal on hold until 19th May-2026. Thank you - rs__",
         "Hi team upon checking this account is for further checking. Wait for our superior decision. Thank you - rs__",
@@ -1195,35 +1191,17 @@
     renderList('tg');
     renderList('risk');
 
-    // China Clock (Asia/Shanghai, UTC+8) — 24h with per-digit flip animation
+    // China Clock (Asia/Shanghai, UTC+8) — 24h, plain text, no animation
     (function initChinaClock() {
         const timeEl = document.getElementById('cnClockTime');
         if (!timeEl) return;
-        let prevStr = '';
 
-        function getChinaParts() {
+        function render() {
             const fmt = new Intl.DateTimeFormat('en-GB', {
                 timeZone: 'Asia/Shanghai',
                 hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
             });
-            const parts = fmt.formatToParts(new Date());
-            const get = (t) => parts.find(p => p.type === t)?.value || '00';
-            return { h: get('hour'), m: get('minute'), s: get('second') };
-        }
-
-        function render() {
-            const { h, m, s } = getChinaParts();
-            const str = `${h}${m}${s}`;
-            const chars = [...h, ':', ...m, ':', ...s];
-            const prevChars = prevStr ? [...prevStr] : [];
-
-            timeEl.innerHTML = chars.map((ch, i) => {
-                if (ch === ':') return `<span class="cn-clock-colon">:</span>`;
-                const changed = prevChars[i] !== undefined && prevChars[i] !== ch;
-                return `<span class="cn-clock-digit${changed ? ' flip' : ''}">${ch}</span>`;
-            }).join('');
-
-            prevStr = str;
+            timeEl.textContent = fmt.format(new Date());
         }
 
         render();
