@@ -787,9 +787,6 @@
 </head>
 <body>
 <script>
-  // Auth guard — kept as the very first, plain (non-deferred) script so it
-  // runs synchronously during parsing and can redirect before any of the
-  // protected page below is shown.
   (function() {
     const SESSION_KEY = "secure_auth_session";
     try {
@@ -865,163 +862,392 @@
 </div>
 
 <script>
-/* =====================================================================
-   SECTION 1 — CONFIG
-   All canned-text templates and dropdown options live here, and only
-   here. Add a new TG reply, risk remark, or dropdown option by editing
-   one of these arrays — nothing else needs to change.
-   ===================================================================== */
+    const data = {
+        tg: [
+            "Checking team - rs__",
+            "On it team. Thanks - rs__",
+            "Done team. Thanks - rs__",
+            "Verified team. Thanks - rs__",
+            "Rejected team. Thanks - rs__",
+            "For Further Checking - rs__",
+            "Hi team this account is for further review thanks — rs__",
+            "Hi team done rejected due to invalid turnover thank you —rs__",
+            "Hi, team this player is for adjustment thanks - rs__",
+            "Hi team as per checking account is for adjustment will be back to active status once adjustment is done. Thank you — rs__",
+            "Hi team, this account will remain inactive as per superior's instructions. Thanks team —rs__",
+            "Confirmed fraud activity, cannot back to active as per our superior's instructions, Thanks - rs__",
+            "Hi team upon checking this account is  Suspicious betting activities, account under review by Sports Provider and withdrawal on hold until 19th May-2026. Thank you - rs__",
+            "Hi team upon checking this account is for further checking. Wait for our superior decision. Thank you - rs__",
+        ],
+        risk: [
+            "Deposit Required",
+            "AB Bet. Invalid Turnover: ",
+            "Active Bonus Invalid TO, Need to reach : ",
+            "CDF - Chip Dumping Fraud With -",
+            "For review - Regular deposit abuse",
+            "Fund In Fund Out / AB Betting In RELAX Arcade 100 Bit Dice",
+            "MAC - Multiple Account Creation-",
+            "HBF - PG Hide Balance Fraud",
+            "RAF - RAF Bonus Abuser -",
+            "Suspicious -- Select Type --",
+            "Slots FDB Abuser ",
+        ]
+    };
 
-const TG_CHAT_TEMPLATES = [
-    "Checking team - rs__",
-    "On it team. Thanks - rs__",
-    "Done team. Thanks - rs__",
-    "Verified team. Thanks - rs__",
-    "Rejected team. Thanks - rs__",
-    "For Further Checking - rs__",
-    "Hi team this account is for further review thanks — rs__",
-    "Hi team done rejected due to invalid turnover thank you —rs__",
-    "Hi, team this player is for adjustment thanks - rs__",
-    "Hi team as per checking account is for adjustment will be back to active status once adjustment is done. Thank you — rs__",
-    "Hi team, this account will remain inactive as per superior's instructions. Thanks team —rs__",
-    "Confirmed fraud activity, cannot back to active as per our superior's instructions, Thanks - rs__",
-    "Hi team upon checking this account is  Suspicious betting activities, account under review by Sports Provider and withdrawal on hold until 19th May-2026. Thank you - rs__",
-    "Hi team upon checking this account is for further checking. Wait for our superior decision. Thank you - rs__",
-];
+    let currentTab = 'tg';
+    const toast = document.getElementById('toast');
+    const quickInput = document.getElementById('quickInput');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalInput = document.getElementById('modalInput');
+    const modalTitle = document.getElementById('modalTitle');
 
-const RISK_REMARK_TEMPLATES = [
-    "Deposit Required",
-    "AB Bet. Invalid Turnover: ",
-    "Active Bonus Invalid TO, Need to reach : ",
-    "CDF - Chip Dumping Fraud With -",
-    "For review - Regular deposit abuse",
-    "Fund In Fund Out / AB Betting In",
-    "MAC - Multiple Account Creation-",
-    "HBF - PG Hide Balance Fraud",
-    "RAF - RAF Bonus Abuser -",
-    "Suspicious -- Select Type --",
-    "Slots FDB Abuser ",
-];
-
-const CDF_PLATFORM_OPTIONS = ["EVOLUTION", "SEXYBCRT", "KINGMAKER", "PP"];
-
-const CDF_GAME_OPTIONS = ["Bac Bo", "Baccarat", "Roulette"];
-
-// { value, label } — value is what gets copied, label is what's shown.
-const SUSPICIOUS_TYPE_OPTIONS = [
-    { value: "Suspicious bets in Bookmaker Market-SOCCER", label: "bets in Bookmaker Market-SOCCER" },
-    { value: "Suspicious Taixiu winning", label: "Taixiu winning" },
-    { value: "Suspicious Sports Hedging", label: "Sports Hedging" },
-    { value: "Suspicious Cricket Sports Bets", label: "Cricket Sports Bets" },
-    { value: "Suspicious CF winning", label: "CF winning" },
-    { value: "Suspicious Deposit", label: "Deposit" },
-];
-
-/* =====================================================================
-   SECTION 2 — SESSION
-   Reads the logged-in user's RS identifier from the session that
-   login.html/the auth guard above already established.
-   ===================================================================== */
-
-function getSessionRsIdentifier() {
-    try {
-        const raw = localStorage.getItem('secure_auth_session');
-        if (!raw) return null;
-        const session = JSON.parse(raw);
-        // "rs45@casinomcw.com" -> "rs45"
-        return (session.email || '').split('@')[0].trim() || null;
-    } catch {
-        return null;
+    function switchTab(tab, event) {
+        currentTab = tab;
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tab).classList.add('active');
+        event.target.classList.add('active');
     }
-}
 
-/* =====================================================================
-   SECTION 3 — TOAST + CLIPBOARD
-   Small, reusable "copy this text and confirm it" helpers used
-   everywhere in the app.
-   ===================================================================== */
+    function notify(msg = "Copied!") {
+        toast.textContent = msg;
+        toast.classList.remove('show');
+        void toast.offsetWidth;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 1400);
+    }
 
-const TOAST_VISIBLE_DURATION_MS = 1400;
+    function copyText(text) {
+        navigator.clipboard.writeText(text).then(() => notify("✓ Copied!"));
+    }
 
-function showToast(message = 'Copied!') {
-    const el = document.getElementById('toast');
-    if (!el) return;
-    el.textContent = message;
-    el.classList.remove('show');
-    void el.offsetWidth; // restart the CSS animation
-    el.classList.add('show');
-    setTimeout(() => el.classList.remove('show'), TOAST_VISIBLE_DURATION_MS);
-}
+    function quickCopy() {
+        const text = quickInput.value.trim();
+        if (text) {
+            copyText(text);
+            quickInput.value = "";
+            quickInput.focus();
+        }
+    }
 
-function copyText(text) {
-    navigator.clipboard.writeText(text).then(() => showToast('✓ Copied!'));
-}
-
-/* =====================================================================
-   SECTION 4 — REMARK STORE
-   Owns the two lists of remarks shown in the app ("tg" and "risk").
-   ===================================================================== */
-
-const remarks = {
-    tg: [],                              // filled in by refreshTgTemplatesForSession() below
-    risk: [...RISK_REMARK_TEMPLATES],
-};
-
-function getRemarks(listName) {
-    return remarks[listName];
-}
-
-/** Adds an item to a list. Returns false (does nothing) for an unknown list name. */
-function addRemark(listName, text) {
-    if (!remarks[listName]) return false;
-    remarks[listName].push(text);
-    return true;
-}
-
-/** Fills the TG list by substituting "rs__" with the current session's RS identifier. */
-function refreshTgTemplatesForSession() {
-    const rsIdentifier = getSessionRsIdentifier() || 'rs__';
-    remarks.tg = TG_CHAT_TEMPLATES.map(template => template.replace(/rs__/g, rsIdentifier));
-}
-
-/* =====================================================================
-   SECTION 5 — TABS
-   ===================================================================== */
-
-let currentTab = 'tg';
-
-function switchTab(tab, event) {
-    currentTab = tab;
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(tab).classList.add('active');
-    event.target.classList.add('active');
-}
-
-/** Invoked when the side nav-panel iframe posts a 'switch-tab' message. */
-function switchTabFromMenu(tab) {
-    currentTab = tab;
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(tab).classList.add('active');
-    document.querySelectorAll('.tab-btn').forEach(b => {
-        if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(tab)) b.classList.add('active');
+    quickInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') quickCopy();
     });
-    document.getElementById('sidePanel').classList.remove('active');
-    document.getElementById('sideOverlay').classList.remove('active');
-}
 
-/* =====================================================================
-   SECTION 6 — SIDE PANEL
-   ===================================================================== */
+    function triggerCopyBtn(btn, textFn) {
+        // Ripple + flash
+        btn.classList.add('ripple');
+        const item = btn.closest('.remark-item');
+        if (item) {
+            item.classList.remove('flash');
+            void item.offsetWidth;
+            item.classList.add('flash');
+            setTimeout(() => item.classList.remove('flash'), 500);
+        }
+        btn.classList.add('copied');
+        btn.textContent = '✓';
+        setTimeout(() => {
+            btn.classList.remove('copied', 'ripple');
+            btn.textContent = 'Copy';
+        }, 1200);
+        textFn();
+    }
 
-function toggleSidePanel() {
-    document.getElementById('sidePanel').classList.toggle('active');
-    document.getElementById('sideOverlay').classList.toggle('active');
-}
+    function renderList(type) {
+        const listEl = document.getElementById(`${type}-list`);
+        const items = data[type];
 
-/** Listens for commands from the nav-panel.html iframe. */
-function initNavPanelBridge() {
+        if (items.length === 0) {
+            listEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📭</div><p>No items. Tap + to add one!</p></div>`;
+            return;
+        }
+
+        listEl.innerHTML = items.map((text, idx) => {
+            if (text.includes("AB Bet. Invalid Turnover:")) {
+                return `
+                <div class="remark-item">
+                    <div class="input-section">
+                        <div class="input-row">
+                            <span class="input-label">AB Bet. Invalid Turnover:</span>
+                            <input type="text" id="abBetInput" class="inline-input input-amount" placeholder="0.00" oninput="updateABBetAmount()">
+                            <span id="abBetAmount" class="amount-display"></span>
+                        </div>
+                    </div>
+                    <button class="copy-btn" onclick="triggerCopyBtn(this, copyABBetText)">Copy</button>
+                </div>`;
+            }
+            if (text.includes("Active Bonus Invalid TO, Need to reach :")) {
+                return `
+                <div class="remark-item">
+                    <div class="input-section">
+                        <div class="input-row">
+                            <span class="input-label">Active Bonus Invalid TO, Need to reach:</span>
+                            <input type="text" id="activeBonusInput" class="inline-input input-amount" placeholder="0.00" oninput="updateActiveBonusAmount()">
+                            <span id="activeBonusAmount" class="amount-display"></span>
+                        </div>
+                    </div>
+                    <button class="copy-btn" onclick="triggerCopyBtn(this, copyActiveBonusText)">Copy</button>
+                </div>`;
+            }
+            if (text.includes("CDF - Chip Dumping Fraud With -")) {
+                return `
+                <div class="remark-item">
+                    <div class="input-section">
+                        <div class="cdf-section">
+                            <div class="cdf-row">
+                                <span class="input-label">CDF - Chip Dumping Fraud With:</span>
+                                <input type="text" id="cdfUsernameInput" class="inline-input input-username" placeholder="UserName" oninput="updateCDFText()">
+                                <span class="separator">(</span>
+                                <input type="text" id="cdfM1Input" class="inline-input input-identifier" placeholder="M1" oninput="updateCDFText()">
+                                <span class="separator">)</span>
+                            </div>
+                            <div class="cdf-row">
+                                <span class="input-label">in</span>
+                                <select id="cdfPlatformDropdown" class="inline-select" style="width:140px" onchange="updateCDFText()">
+                                    <option value="">-- Platform --</option>
+                                    <option value="EVOLUTION">EVOLUTION</option>
+                                    <option value="SEXYBCRT">SEXYBCRT</option>
+                                    <option value="KINGMAKER">KINGMAKER</option>
+                                    <option value="PP">PP</option>
+                                </select>
+                                <span class="separator">/</span>
+                                <select id="cdfGameDropdown" class="inline-select" style="width:140px" onchange="updateCDFText()">
+                                    <option value="">-- Game --</option>
+                                    <option value="Bac Bo">Bac Bo</option>
+                                    <option value="Baccarat">Baccarat</option>
+                                    <option value="Roulette">Roulette</option>
+                                </select>
+                            </div>
+                            <div class="cdf-row"><span class="input-label">/ Suspicious In Out Fund</span></div>
+                            <div id="cdfPreview" class="cdf-preview"></div>
+                        </div>
+                    </div>
+                    <button class="copy-btn" onclick="triggerCopyBtn(this, copyCDFText)">Copy</button>
+                </div>`;
+            }
+            if (text.includes("Suspicious -- Select Type --")) {
+                return `
+                <div class="remark-item">
+                    <div class="input-section">
+                        <div class="cdf-row">
+                            <span class="input-label">Suspicious:</span>
+                            <select id="suspiciousDropdown" class="inline-select" style="width:280px" onchange="updateSuspiciousPreview()">
+                                <option value="">-- Select Type --</option>
+                                <option value="Suspicious bets in Bookmaker Market-SOCCER">bets in Bookmaker Market-SOCCER</option>
+                                <option value="Suspicious Taixiu winning">Taixiu winning</option>
+                                <option value="Suspicious Sports Hedging">Sports Hedging</option>
+                                <option value="Suspicious Cricket Sports Bets">Cricket Sports Bets</option>
+                                <option value="Suspicious CF winning">CF winning</option>
+                                <option value="Suspicious Deposit">Deposit</option>
+                            </select>
+                        </div>
+                        <div id="suspiciousPreview" class="cdf-preview"></div>
+                    </div>
+                    <button class="copy-btn" onclick="triggerCopyBtn(this, copySuspiciousText)">Copy</button>
+                </div>`;
+            }
+            return `
+            <div class="remark-item">
+                <span class="remark-text">${text}</span>
+                <button class="copy-btn" onclick="triggerCopyBtn(this, () => copyText('${text.replace(/'/g, "\\'")}'))">Copy</button>
+            </div>`;
+        }).join('');
+    }
+
+    function updateABBetAmount() {
+        const input = document.getElementById('abBetInput');
+        const display = document.getElementById('abBetAmount');
+        if (!input || !display) return;
+        display.textContent = input.value.trim();
+    }
+
+    function copyABBetText() {
+        const amount = document.getElementById('abBetAmount')?.textContent || '';
+        if (!amount) { notify("No amount set!"); return; }
+        let formattedAmount = amount;
+        const num = parseFloat(amount.replace(/,/g, ''));
+        if (!isNaN(num)) formattedAmount = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        copyText(`AB Bet. Invalid Turnover: ${formattedAmount}`);
+    }
+
+    function updateActiveBonusAmount() {
+        const input = document.getElementById('activeBonusInput');
+        const display = document.getElementById('activeBonusAmount');
+        if (!input || !display) return;
+        display.textContent = input.value.trim();
+    }
+
+    function copyActiveBonusText() {
+        const amount = document.getElementById('activeBonusAmount')?.textContent || '';
+        if (!amount) { notify("No amount set!"); return; }
+        let formattedAmount = amount;
+        const num = parseFloat(amount.replace(/,/g, ''));
+        if (!isNaN(num)) formattedAmount = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        copyText(`Active Bonus Invalid TO, Need to reach : ${formattedAmount}`);
+    }
+
+    function updateCDFText() {
+        const username = document.getElementById('cdfUsernameInput')?.value.trim() || '';
+        const m1 = document.getElementById('cdfM1Input')?.value.trim() || '';
+        const platform = document.getElementById('cdfPlatformDropdown')?.value || '';
+        const game = document.getElementById('cdfGameDropdown')?.value || '';
+        const preview = document.getElementById('cdfPreview');
+        if (!preview) return;
+        let t = 'CDF - Chip Dumping Fraud With -';
+        if (username) { t += ` ${username}`; if (m1) t += `(${m1})`; }
+        if (platform || game) { t += ' in'; if (platform) t += ` ${platform}`; if (game) t += `/${game}`; }
+        t += ' / Suspicious In Out Fund';
+        preview.textContent = '✓ Preview: ' + t;
+    }
+
+    function copyCDFText() {
+        const username = document.getElementById('cdfUsernameInput')?.value.trim() || '';
+        const m1 = document.getElementById('cdfM1Input')?.value.trim() || '';
+        const platform = document.getElementById('cdfPlatformDropdown')?.value || '';
+        const game = document.getElementById('cdfGameDropdown')?.value || '';
+        let text = 'CDF - Chip Dumping Fraud With -';
+        if (username) { text += ` ${username}`; if (m1) text += `(${m1})`; }
+        if (platform || game) { text += ' in'; if (platform) text += ` ${platform}`; if (game) text += `/${game}`; }
+        text += ' / Suspicious In Out Fund';
+        copyText(text);
+    }
+
+    function updateSuspiciousPreview() {
+        const value = document.getElementById('suspiciousDropdown')?.value || '';
+        const preview = document.getElementById('suspiciousPreview');
+        if (!preview) return;
+        preview.textContent = value ? '✓ Preview: ' + value : '';
+    }
+
+    function copySuspiciousText() {
+        const value = document.getElementById('suspiciousDropdown')?.value || '';
+        if (!value) { notify("Please select a type!"); return; }
+        copyText(value);
+    }
+
+    function openModal() {
+        modalTitle.textContent = "Add New Item";
+        modalInput.value = "";
+        modalOverlay.classList.add('active');
+        setTimeout(() => modalInput.focus(), 100);
+    }
+
+    function closeModal(event) {
+        if (event && event.target !== modalOverlay) return;
+        modalOverlay.classList.remove('active');
+    }
+
+    function saveItem() {
+        const text = modalInput.value.trim();
+        if (!text) { notify("Please enter text!"); return; }
+        if (data[currentTab]) {
+            data[currentTab].push(text);
+            notify("✓ Added!");
+            renderList(currentTab);
+            modalOverlay.classList.remove('active');
+        }
+    }
+
+    modalInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && e.ctrlKey) saveItem();
+    });
+
+    const TG_TEMPLATES = [
+        "Checking team - rs__",
+        "On it team. Thanks - rs__",
+        "Done team. Thanks - rs__",
+        "Verified team. Thanks - rs__",
+        "Rejected team. Thanks - rs__",
+        "For Further Checking - rs__",
+        "Hi team this account is for further review thanks — rs__",
+        "Hi team done rejected due to invalid turnover thank you —rs__",
+        "Hi, team this player is for adjustment thanks - rs__",
+        "Hi team as per checking account is for adjustment will be back to active status once adjustment is done. Thank you — rs__",
+        "Hi team, this account will remain inactive as per superior's instructions. Thanks team —rs__",
+        "Confirmed fraud activity, cannot back to active as per our superior's instructions, Thanks - rs__",
+        "Hi team upon checking this account is  Suspicious betting activities, account under review by Sports Provider and withdrawal on hold until 19th May-2026. Thank you - rs__",
+        "Hi team upon checking this account is for further checking. Wait for our superior decision. Thank you - rs__",
+    ];
+
+    function getSessionRS() {
+        try {
+            const raw = localStorage.getItem('secure_auth_session');
+            if (!raw) return null;
+            const s = JSON.parse(raw);
+            // Extract username part before @  e.g. "rs45@casinomcw.com" → "rs45"
+            return (s.email || '').split('@')[0].trim() || null;
+        } catch { return null; }
+    }
+
+    function updateTGNumbers() {
+        const rsUser = getSessionRS();
+        const number = rsUser || 'rs__';
+        data.tg = TG_TEMPLATES.map(t => t.replace(/rs__/g, number));
+        if (currentTab === 'tg') renderList('tg');
+    }
+
+    updateTGNumbers();
+    renderList('tg');
+    renderList('risk');
+
+    // China Clock (Asia/Shanghai, UTC+8) — 24h, plain text, no animation
+    (function initChinaClock() {
+        const timeEl = document.getElementById('cnClockTime');
+        if (!timeEl) return;
+
+        function render() {
+            const fmt = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Shanghai',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+            });
+            timeEl.textContent = fmt.format(new Date());
+        }
+
+        render();
+        setInterval(render, 1000);
+    })();
+
+    // Scroll handler
+    const quickBar = document.querySelector('.quick-bar');
+    let lastScrollY = 0;
+
+    function handleScroll() {
+        const activeContent = document.querySelector('.tab-content.active');
+        if (!activeContent) return;
+        const scrollY = activeContent.scrollTop;
+        if (scrollY > 10) quickBar.classList.add('hidden-bar');
+        else quickBar.classList.remove('hidden-bar');
+        const atBottom = activeContent.scrollHeight - scrollY - activeContent.clientHeight < 24;
+        const footer = activeContent.querySelector('.footer');
+        if (footer) {
+            if (atBottom) footer.classList.add('visible');
+            else footer.classList.remove('visible');
+        }
+        lastScrollY = scrollY;
+    }
+
+    document.querySelectorAll('.tab-content').forEach(el => {
+        el.addEventListener('scroll', handleScroll, { passive: true });
+    });
+
+    function switchTabFromMenu(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tab).classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(tab)) b.classList.add('active');
+        });
+        document.getElementById('sidePanel').classList.remove('active');
+        document.getElementById('sideOverlay').classList.remove('active');
+    }
+
+    function toggleSidePanel() {
+        document.getElementById('sidePanel').classList.toggle('active');
+        document.getElementById('sideOverlay').classList.toggle('active');
+    }
+
+    // Listen for commands from nav-panel.html iframe
     window.addEventListener('message', function(e) {
         const d = e.data;
         if (!d || !d.type) return;
@@ -1033,361 +1259,10 @@ function initNavPanelBridge() {
         } else if (d.type === 'open-url' && d.url) {
             window.open(d.url, '_blank');
         } else if (d.type === 'open-page' && d.file) {
+            // Navigate to the registered page file
             window.location.href = d.file;
         }
     });
-}
-
-/* =====================================================================
-   SECTION 7 — QUICK COPY BAR + SCROLL BEHAVIOR
-   ===================================================================== */
-
-function initQuickCopyBar() {
-    const quickInput = document.getElementById('quickInput');
-    quickInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') quickCopy();
-    });
-}
-
-function quickCopy() {
-    const quickInput = document.getElementById('quickInput');
-    const text = quickInput.value.trim();
-    if (text) {
-        copyText(text);
-        quickInput.value = '';
-        quickInput.focus();
-    }
-}
-
-/** Hides the quick-copy bar and reveals the footer near the bottom of the scroll. */
-function initScrollBehavior() {
-    const quickBar = document.querySelector('.quick-bar');
-
-    function handleScroll() {
-        const activeContent = document.querySelector('.tab-content.active');
-        if (!activeContent) return;
-
-        const scrollY = activeContent.scrollTop;
-        quickBar.classList.toggle('hidden-bar', scrollY > 10);
-
-        const nearBottom = activeContent.scrollHeight - scrollY - activeContent.clientHeight < 24;
-        const footer = activeContent.querySelector('.footer');
-        if (footer) footer.classList.toggle('visible', nearBottom);
-    }
-
-    document.querySelectorAll('.tab-content').forEach(el => {
-        el.addEventListener('scroll', handleScroll, { passive: true });
-    });
-}
-
-/* =====================================================================
-   SECTION 8 — "ADD NEW ITEM" MODAL
-   ===================================================================== */
-
-let modalOverlay, modalInput, modalTitle;
-
-function initAddItemModal() {
-    modalOverlay = document.getElementById('modalOverlay');
-    modalInput = document.getElementById('modalInput');
-    modalTitle = document.getElementById('modalTitle');
-
-    modalInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && e.ctrlKey) saveItem();
-    });
-}
-
-function openModal() {
-    modalTitle.textContent = "Add New Item";
-    modalInput.value = "";
-    modalOverlay.classList.add('active');
-    setTimeout(() => modalInput.focus(), 100);
-}
-
-function closeModal(event) {
-    if (event && event.target !== modalOverlay) return;
-    modalOverlay.classList.remove('active');
-}
-
-function saveItem() {
-    const text = modalInput.value.trim();
-    if (!text) { showToast("Please enter text!"); return; }
-    if (addRemark(currentTab, text)) {
-        showToast("✓ Added!");
-        renderList(currentTab);
-        modalOverlay.classList.remove('active');
-    }
-    // If addRemark() returns false, currentTab isn't a known list name
-    // ("tg"/"risk") — see the note about `currentTab` in SECTION 5.
-}
-
-/* =====================================================================
-   SECTION 9 — SPECIAL REMARK FIELDS
-   (AB Bet, Active Bonus, CDF, Suspicious dropdown)
-
-   AB Bet and Active Bonus are the same "label + amount input" pattern
-   twice, so one factory builds both instead of two copy-pasted
-   implementations. CDF's preview and its copy button used to rebuild
-   the same string independently — buildCdfText() is now the one place
-   that happens.
-   ===================================================================== */
-
-function formatAmount(rawAmount) {
-    const numeric = parseFloat(rawAmount.replace(/,/g, ''));
-    if (isNaN(numeric)) return rawAmount;
-    return numeric.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function createAmountFieldController({ inputId, displayId, textPrefix }) {
-    return {
-        updateDisplay() {
-            const input = document.getElementById(inputId);
-            const display = document.getElementById(displayId);
-            if (!input || !display) return;
-            display.textContent = input.value.trim();
-        },
-        copyFormattedText() {
-            const amount = document.getElementById(displayId)?.textContent || '';
-            if (!amount) { showToast("No amount set!"); return; }
-            copyText(`${textPrefix}${formatAmount(amount)}`);
-        },
-    };
-}
-
-const abBetField = createAmountFieldController({
-    inputId: 'abBetInput',
-    displayId: 'abBetAmount',
-    textPrefix: 'AB Bet. Invalid Turnover: ',
-});
-function updateABBetAmount() { abBetField.updateDisplay(); }
-function copyABBetText() { abBetField.copyFormattedText(); }
-
-const activeBonusField = createAmountFieldController({
-    inputId: 'activeBonusInput',
-    displayId: 'activeBonusAmount',
-    textPrefix: 'Active Bonus Invalid TO, Need to reach : ',
-});
-function updateActiveBonusAmount() { activeBonusField.updateDisplay(); }
-function copyActiveBonusText() { activeBonusField.copyFormattedText(); }
-
-function buildCdfText() {
-    const username = document.getElementById('cdfUsernameInput')?.value.trim() || '';
-    const m1 = document.getElementById('cdfM1Input')?.value.trim() || '';
-    const platform = document.getElementById('cdfPlatformDropdown')?.value || '';
-    const game = document.getElementById('cdfGameDropdown')?.value || '';
-
-    let text = 'CDF - Chip Dumping Fraud With -';
-    if (username) { text += ` ${username}`; if (m1) text += `(${m1})`; }
-    if (platform || game) { text += ' in'; if (platform) text += ` ${platform}`; if (game) text += `/${game}`; }
-    text += ' / Suspicious In Out Fund';
-    return text;
-}
-
-function updateCDFText() {
-    const preview = document.getElementById('cdfPreview');
-    if (!preview) return;
-    preview.textContent = '✓ Preview: ' + buildCdfText();
-}
-
-function copyCDFText() {
-    copyText(buildCdfText());
-}
-
-function updateSuspiciousPreview() {
-    const value = document.getElementById('suspiciousDropdown')?.value || '';
-    const preview = document.getElementById('suspiciousPreview');
-    if (!preview) return;
-    preview.textContent = value ? '✓ Preview: ' + value : '';
-}
-
-function copySuspiciousText() {
-    const value = document.getElementById('suspiciousDropdown')?.value || '';
-    if (!value) { showToast("Please select a type!"); return; }
-    copyText(value);
-}
-
-/* =====================================================================
-   SECTION 10 — REMARK LIST RENDERER
-   Turns the remark data into DOM markup. Special remark types (AB Bet,
-   Active Bonus, CDF, Suspicious) get a richer field instead of a plain
-   copy button; everything else falls back to the generic template.
-
-   To add a new special field: add an entry to SPECIAL_REMARK_RENDERERS
-   below instead of writing a new if/else branch.
-   ===================================================================== */
-
-function optionsHtml(values) {
-    return values.map(v => `<option value="${v}">${v}</option>`).join('');
-}
-
-function suspiciousOptionsHtml() {
-    return SUSPICIOUS_TYPE_OPTIONS.map(({ value, label }) => `<option value="${value}">${label}</option>`).join('');
-}
-
-const SPECIAL_REMARK_RENDERERS = [
-    {
-        matches: (text) => text.includes("AB Bet. Invalid Turnover:"),
-        render: () => `
-            <div class="remark-item">
-                <div class="input-section">
-                    <div class="input-row">
-                        <span class="input-label">AB Bet. Invalid Turnover:</span>
-                        <input type="text" id="abBetInput" class="inline-input input-amount" placeholder="0.00" oninput="updateABBetAmount()">
-                        <span id="abBetAmount" class="amount-display"></span>
-                    </div>
-                </div>
-                <button class="copy-btn" onclick="triggerCopyBtn(this, copyABBetText)">Copy</button>
-            </div>`,
-    },
-    {
-        matches: (text) => text.includes("Active Bonus Invalid TO, Need to reach:"),
-        render: () => `
-            <div class="remark-item">
-                <div class="input-section">
-                    <div class="input-row">
-                        <span class="input-label">Active Bonus Invalid TO, Need to reach:</span>
-                        <input type="text" id="activeBonusInput" class="inline-input input-amount" placeholder="0.00" oninput="updateActiveBonusAmount()">
-                        <span id="activeBonusAmount" class="amount-display"></span>
-                    </div>
-                </div>
-                <button class="copy-btn" onclick="triggerCopyBtn(this, copyActiveBonusText)">Copy</button>
-            </div>`,
-    },
-    {
-        matches: (text) => text.includes("CDF - Chip Dumping Fraud With -"),
-        render: () => `
-            <div class="remark-item">
-                <div class="input-section">
-                    <div class="cdf-section">
-                        <div class="cdf-row">
-                            <span class="input-label">CDF - Chip Dumping Fraud With:</span>
-                            <input type="text" id="cdfUsernameInput" class="inline-input input-username" placeholder="UserName" oninput="updateCDFText()">
-                            <span class="separator">(</span>
-                            <input type="text" id="cdfM1Input" class="inline-input input-identifier" placeholder="M1" oninput="updateCDFText()">
-                            <span class="separator">)</span>
-                        </div>
-                        <div class="cdf-row">
-                            <span class="input-label">in</span>
-                            <select id="cdfPlatformDropdown" class="inline-select" style="width:140px" onchange="updateCDFText()">
-                                <option value="">-- Platform --</option>
-                                ${optionsHtml(CDF_PLATFORM_OPTIONS)}
-                            </select>
-                            <span class="separator">/</span>
-                            <select id="cdfGameDropdown" class="inline-select" style="width:140px" onchange="updateCDFText()">
-                                <option value="">-- Game --</option>
-                                ${optionsHtml(CDF_GAME_OPTIONS)}
-                            </select>
-                        </div>
-                        <div class="cdf-row"><span class="input-label">/ Suspicious In Out Fund</span></div>
-                        <div id="cdfPreview" class="cdf-preview"></div>
-                    </div>
-                </div>
-                <button class="copy-btn" onclick="triggerCopyBtn(this, copyCDFText)">Copy</button>
-            </div>`,
-    },
-    {
-        matches: (text) => text.includes("Suspicious -- Select Type --"),
-        render: () => `
-            <div class="remark-item">
-                <div class="input-section">
-                    <div class="cdf-row">
-                        <span class="input-label">Suspicious:</span>
-                        <select id="suspiciousDropdown" class="inline-select" style="width:280px" onchange="updateSuspiciousPreview()">
-                            <option value="">-- Select Type --</option>
-                            ${suspiciousOptionsHtml()}
-                        </select>
-                    </div>
-                    <div id="suspiciousPreview" class="cdf-preview"></div>
-                </div>
-                <button class="copy-btn" onclick="triggerCopyBtn(this, copySuspiciousText)">Copy</button>
-            </div>`,
-    },
-];
-
-function renderGenericItem(text) {
-    const escapedText = text.replace(/'/g, "\\'");
-    return `
-            <div class="remark-item">
-                <span class="remark-text">${text}</span>
-                <button class="copy-btn" onclick="triggerCopyBtn(this, () => copyText('${escapedText}'))">Copy</button>
-            </div>`;
-}
-
-function renderEmptyState() {
-    return `<div class="empty-state"><div class="empty-state-icon">📭</div><p>No items. Tap + to add one!</p></div>`;
-}
-
-function renderList(listName) {
-    const listEl = document.getElementById(`${listName}-list`);
-    const items = getRemarks(listName);
-
-    if (items.length === 0) {
-        listEl.innerHTML = renderEmptyState();
-        return;
-    }
-
-    listEl.innerHTML = items.map((text) => {
-        const special = SPECIAL_REMARK_RENDERERS.find(renderer => renderer.matches(text));
-        return special ? special.render() : renderGenericItem(text);
-    }).join('');
-}
-
-/** Plays the copy-button ripple/flash feedback, then runs the copy action. */
-function triggerCopyBtn(btn, copyAction) {
-    btn.classList.add('ripple');
-
-    const item = btn.closest('.remark-item');
-    if (item) {
-        item.classList.remove('flash');
-        void item.offsetWidth;
-        item.classList.add('flash');
-        setTimeout(() => item.classList.remove('flash'), 500);
-    }
-
-    btn.classList.add('copied');
-    btn.textContent = '✓';
-    setTimeout(() => {
-        btn.classList.remove('copied', 'ripple');
-        btn.textContent = 'Copy';
-    }, 1200);
-
-    copyAction();
-}
-
-/* =====================================================================
-   SECTION 11 — CHINA CLOCK
-   ===================================================================== */
-
-function initChinaClock() {
-    const timeEl = document.getElementById('cnClockTime');
-    if (!timeEl) return;
-
-    const formatter = new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Asia/Shanghai',
-        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-    });
-
-    function render() {
-        timeEl.textContent = formatter.format(new Date());
-    }
-
-    render();
-    setInterval(render, 1000);
-}
-
-/* =====================================================================
-   SECTION 12 — BOOTSTRAP
-   Runs once, wires everything above together.
-   ===================================================================== */
-
-initQuickCopyBar();
-initScrollBehavior();
-initNavPanelBridge();
-initAddItemModal();
-initChinaClock();
-
-refreshTgTemplatesForSession();
-renderList('tg');
-renderList('risk');
 </script>
 
 </body>
