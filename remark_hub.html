@@ -885,9 +885,9 @@
             "Active Bonus Invalid TO, Need to reach : ",
             "CDF - Chip Dumping Fraud With -",
             "Fund In Fund Out / AB Betting In -- Select Game --",
-            "MAC - Multiple Account Creation-",
-            "HBF - PG Hide Balance Fraud",
-            "RAF - RAF Bonus Abuser -",
+            "MAC - Multiple Account Creation With -",
+            "HBF - -- Select Provider -- Hide Balance Fraud",
+            "RAF - RAF Bonus Abuser With -",
             "Suspicious -- Select Type --",
             "Slots FDB Abuser ",
         ]
@@ -1024,6 +1024,55 @@
                     <button class="copy-btn" onclick="triggerCopyBtn(this, copyCDFText)">Copy</button>
                 </div>`;
             }
+            if (text.includes("MAC - Multiple Account Creation With -")) {
+                return `
+                <div class="remark-item">
+                    <div class="input-section">
+                        <div class="input-row">
+                            <span class="input-label">MAC - Multiple Account Creation With:</span>
+                            <input type="text" id="macUsernamesInput" class="inline-input input-username" style="width:220px" placeholder="3-4 usernames" oninput="updateMACPreview()">
+                        </div>
+                        <div id="macPreview" class="cdf-preview"></div>
+                    </div>
+                    <button class="copy-btn" onclick="triggerCopyBtn(this, copyMACText)">Copy</button>
+                </div>`;
+            }
+            if (text.includes("RAF - RAF Bonus Abuser With -")) {
+                return `
+                <div class="remark-item">
+                    <div class="input-section">
+                        <div class="input-row">
+                            <span class="input-label">RAF - RAF Bonus Abuser With:</span>
+                            <input type="text" id="rafUsernamesInput" class="inline-input input-username" style="width:220px" placeholder="3-4 usernames" oninput="updateRAFPreview()">
+                        </div>
+                        <div id="rafPreview" class="cdf-preview"></div>
+                    </div>
+                    <button class="copy-btn" onclick="triggerCopyBtn(this, copyRAFText)">Copy</button>
+                </div>`;
+            }
+            if (text.includes("HBF - -- Select Provider -- Hide Balance Fraud")) {
+                return `
+                <div class="remark-item">
+                    <div class="input-section">
+                        <div class="cdf-row">
+                            <span class="input-label">HBF -</span>
+                            <select id="hbfProviderDropdown" class="inline-select" style="width:140px" onchange="updateHBFPreview()">
+                                <option value="">-- Provider --</option>
+                                <option value="MG">MG</option>
+                                <option value="PP">PP</option>
+                                <option value="PG">PG</option>
+                                <option value="SG">SG</option>
+                                <option value="PT">PT</option>
+                                <option value="NextSpin">NextSpin</option>
+                                <option value="BTi">BTi</option>
+                            </select>
+                            <span class="input-label">Hide Balance Fraud</span>
+                        </div>
+                        <div id="hbfPreview" class="cdf-preview"></div>
+                    </div>
+                    <button class="copy-btn" onclick="triggerCopyBtn(this, copyHBFText)">Copy</button>
+                </div>`;
+            }
             if (text.includes("Suspicious -- Select Type --")) {
                 return `
                 <div class="remark-item">
@@ -1140,6 +1189,45 @@
         const value = document.getElementById('suspiciousDropdown')?.value || '';
         if (!value) { notify("Please select a type!"); return; }
         copyText(value);
+    }
+
+    function updateMACPreview() {
+        const value = document.getElementById('macUsernamesInput')?.value.trim() || '';
+        const preview = document.getElementById('macPreview');
+        if (!preview) return;
+        preview.textContent = value ? '✓ Preview: MAC - Multiple Account Creation With - ' + value : '';
+    }
+
+    function copyMACText() {
+        const value = document.getElementById('macUsernamesInput')?.value.trim() || '';
+        if (!value) { notify("Please enter usernames!"); return; }
+        copyText(`MAC - Multiple Account Creation With - ${value}`);
+    }
+
+    function updateRAFPreview() {
+        const value = document.getElementById('rafUsernamesInput')?.value.trim() || '';
+        const preview = document.getElementById('rafPreview');
+        if (!preview) return;
+        preview.textContent = value ? '✓ Preview: RAF - RAF Bonus Abuser With - ' + value : '';
+    }
+
+    function copyRAFText() {
+        const value = document.getElementById('rafUsernamesInput')?.value.trim() || '';
+        if (!value) { notify("Please enter usernames!"); return; }
+        copyText(`RAF - RAF Bonus Abuser With - ${value}`);
+    }
+
+    function updateHBFPreview() {
+        const value = document.getElementById('hbfProviderDropdown')?.value || '';
+        const preview = document.getElementById('hbfPreview');
+        if (!preview) return;
+        preview.textContent = value ? '✓ Preview: HBF - ' + value + ' Hide Balance Fraud' : '';
+    }
+
+    function copyHBFText() {
+        const value = document.getElementById('hbfProviderDropdown')?.value || '';
+        if (!value) { notify("Please select a provider!"); return; }
+        copyText(`HBF - ${value} Hide Balance Fraud`);
     }
 
     function updateFundInOutPreview() {
