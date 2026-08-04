@@ -884,8 +884,7 @@
             "AB Bet. Invalid Turnover: ",
             "Active Bonus Invalid TO, Need to reach : ",
             "CDF - Chip Dumping Fraud With -",
-            "For review - Regular deposit abuse",
-            "Fund In Fund Out / AB Betting In RELAX Arcade 100 Bit Dice",
+            "Fund In Fund Out / AB Betting In -- Select Game --",
             "MAC - Multiple Account Creation-",
             "HBF - PG Hide Balance Fraud",
             "RAF - RAF Bonus Abuser -",
@@ -1046,6 +1045,24 @@
                     <button class="copy-btn" onclick="triggerCopyBtn(this, copySuspiciousText)">Copy</button>
                 </div>`;
             }
+            if (text.includes("Fund In Fund Out / AB Betting In")) {
+                return `
+                <div class="remark-item">
+                    <div class="input-section">
+                        <div class="cdf-row">
+                            <span class="input-label">Fund In Fund Out / AB Betting In:</span>
+                            <select id="fundInOutDropdown" class="inline-select" style="width:280px" onchange="updateFundInOutPreview()">
+                                <option value="">-- Select Game --</option>
+                                <option value="RELAX Arcade 100 Bit Dice">RELAX Arcade 100 Bit Dice</option>
+                                <option value="EVOLUTION Roulette">EVOLUTION Roulette</option>
+                                <option value="EVOLUTION Fan Tan">EVOLUTION Fan Tan</option>
+                            </select>
+                        </div>
+                        <div id="fundInOutPreview" class="cdf-preview"></div>
+                    </div>
+                    <button class="copy-btn" onclick="triggerCopyBtn(this, copyFundInOutText)">Copy</button>
+                </div>`;
+            }
             return `
             <div class="remark-item">
                 <span class="remark-text">${text}</span>
@@ -1123,6 +1140,19 @@
         const value = document.getElementById('suspiciousDropdown')?.value || '';
         if (!value) { notify("Please select a type!"); return; }
         copyText(value);
+    }
+
+    function updateFundInOutPreview() {
+        const value = document.getElementById('fundInOutDropdown')?.value || '';
+        const preview = document.getElementById('fundInOutPreview');
+        if (!preview) return;
+        preview.textContent = value ? '✓ Preview: Fund In Fund Out / AB Betting In ' + value : '';
+    }
+
+    function copyFundInOutText() {
+        const value = document.getElementById('fundInOutDropdown')?.value || '';
+        if (!value) { notify("Please select a game!"); return; }
+        copyText(`Fund In Fund Out / AB Betting In ${value}`);
     }
 
     function openModal() {
