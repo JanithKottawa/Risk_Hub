@@ -218,7 +218,7 @@
         </div>
         <div class="row cols-2">
           <div class="field"><label>Total Bonus</label><input id="totalBonus" class="num" type="text" inputmode="decimal"></div>
-          <div class="field"><label>Win/Lose (lifetime)</label><input id="lifetimeWinLose" class="num" type="text" inputmode="decimal"></div>
+          <div class="field"><label>Win/Lose (lifetime)</label><input id="lifetimeWinLose" class="num winlose" type="text" inputmode="decimal" placeholder="e.g. 698.30 or (698.30)"></div>
         </div>
       </div>
 
@@ -235,7 +235,7 @@
           <div class="field"><label>Today Withdrawals</label><input id="todayWithdrawal" class="num" type="text" inputmode="decimal"></div>
         </div>
         <div class="row cols-1">
-          <div class="field"><label>Today Win/Lose</label><input id="todayWinLose" class="num" type="text" inputmode="decimal"></div>
+          <div class="field"><label>Today Win/Lose</label><input id="todayWinLose" class="num winlose" type="text" inputmode="decimal" placeholder="e.g. 698.30 or (698.30)"></div>
         </div>
       </div>
 
@@ -246,7 +246,7 @@
           <div class="field"><label>Turnover</label><input id="turnover" class="num" type="text" inputmode="decimal"></div>
         </div>
         <div class="row cols-2">
-          <div class="field"><label>Win/Lose (game)</label><input id="gameWinLose" class="num" type="text" inputmode="decimal"></div>
+          <div class="field"><label>Win/Lose (game)</label><input id="gameWinLose" class="num winlose" type="text" inputmode="decimal" placeholder="e.g. 698.30 or (698.30)"></div>
           <div class="field"><label>Betting Range</label><input id="bettingRange" type="text"></div>
         </div>
       </div>
@@ -331,12 +331,15 @@ function attachDatePicker(textId, pickerId, btnSelector){
 }
 
 function filterNumeric(el){
-  let val = el.value;
-  val = val.replace(/[^0-9.\-]/g, '');
-  if (val.indexOf('-') > 0) val = val[0] === '-' ? '-' + val.replace(/-/g, '') : val.replace(/-/g, '');
-  else val = val.replace(/(?!^)-/g, '');
+  const allowParens = el.classList.contains('winlose');
+  const disallowed = allowParens ? /[^0-9.\-()]/g : /[^0-9.\-]/g;
+  let val = el.value.replace(disallowed, '');
   const parts = val.split('.');
   if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+  if (!allowParens) {
+    if (val.indexOf('-') > 0) val = val[0] === '-' ? '-' + val.replace(/-/g, '') : val.replace(/-/g, '');
+    else val = val.replace(/(?!^)-/g, '');
+  }
   el.value = val;
 }
 
@@ -347,8 +350,8 @@ function esc(s){
 function getIpDisplayValue(){
   const raw = $('signupIp').value.trim();
   if (raw && ipGeo && (ipGeo.city || ipGeo.country)) {
-    const parts = [ipGeo.city, ipGeo.country].filter(Boolean).join(', ');
-    return `${raw} (${parts})`;
+    const parts = [ipGeo.country, ipGeo.city].filter(Boolean).join(' ');
+    return `${raw} ${parts}`;
   }
   return raw;
 }
@@ -405,7 +408,7 @@ async function lookupSignupIp(ip){
     if (data && data.success) {
       ipGeo = { city: data.city || '', country: data.country || '' };
       infoEl.className = 'ip-info';
-      infoEl.textContent = [ipGeo.city || 'Unknown city', ipGeo.country || 'Unknown country'].join(', ');
+      infoEl.textContent = [ipGeo.country || 'Unknown country', ipGeo.city || 'Unknown city'].join(' ');
     } else {
       ipGeo = null;
       infoEl.className = 'ip-info error';
