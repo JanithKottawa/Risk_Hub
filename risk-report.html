@@ -75,6 +75,13 @@
   }
   .label-edit:focus { outline:none; border-color: var(--teal); color: var(--text); }
 
+  .date-row { display:flex; gap:6px; }
+  .date-row input[type="text"] { flex: 1; }
+  .cal-btn { flex: 0 0 auto; padding: 0 10px; font-size: 14px; line-height: 1; }
+  .ip-info { font-family: var(--mono); font-size: 11px; color: var(--teal); margin-top: 6px; min-height: 14px; }
+  .ip-info.pending { color: var(--muted); font-style: italic; }
+  .ip-info.error { color: var(--accent); }
+
   .btn {
     appearance:none; border:none; cursor:pointer; font-family: var(--sans); font-weight: 600;
     font-size: 12.5px; border-radius: 7px; padding: 9px 14px; letter-spacing: 0.01em;
@@ -102,6 +109,7 @@
     white-space: pre-wrap; font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
     color: #dbe4e8; padding: 18px 18px 20px; max-height: 620px; overflow-y: auto;
   }
+  #output.editing { outline: 1px dashed var(--teal); outline-offset: -1px; cursor: text; }
   #output .lbl { color: #7ce0d6; }
   #output .val { color: #f2f5f2; }
   #output .empty-val { color: #4a5468; font-style: italic; }
@@ -151,7 +159,14 @@
       <div class="section">
         <div class="section-head"><span class="section-num">01</span><span class="section-title">Report Meta</span></div>
         <div class="row">
-          <div class="field"><label>Date</label><input id="date" type="date"></div>
+          <div class="field">
+            <label>Date</label>
+            <div class="date-row">
+              <input id="date" type="text" placeholder="2025/06/01" autocomplete="off" maxlength="10">
+              <button type="button" class="btn btn-ghost cal-btn" data-target="date" title="Pick date">&#128197;</button>
+            </div>
+            <input type="date" id="date_picker" style="display:none;">
+          </div>
           <div class="field">
             <label>Platform</label>
             <input id="platform" type="text" list="platformList" autocomplete="off">
@@ -177,12 +192,20 @@
         <div class="section-head"><span class="section-num">02</span><span class="section-title">Player</span></div>
         <div class="row cols-2">
           <div class="field"><label>Player (username)</label><input id="player" type="text"></div>
-          <div class="field"><label>Registration Time</label><input id="regTime" type="date"></div>
+          <div class="field">
+            <label>Registration Time</label>
+            <div class="date-row">
+              <input id="regTime" type="text" placeholder="2025/06/01" autocomplete="off" maxlength="10">
+              <button type="button" class="btn btn-ghost cal-btn" data-target="regTime" title="Pick date">&#128197;</button>
+            </div>
+            <input type="date" id="regTime_picker" style="display:none;">
+          </div>
         </div>
         <div class="row cols-1">
           <div class="field">
             <label>Sign Up IP</label>
             <input id="signupIp" type="text" autocomplete="off">
+            <div class="ip-info" id="ipInfo"></div>
           </div>
         </div>
       </div>
@@ -254,9 +277,10 @@
         <div class="preview-head">
           <div class="preview-title"><span class="dots"><span></span><span></span><span></span></span>&nbsp;output.txt</div>
         </div>
-        <div id="output"></div>
+        <div id="output" contenteditable="false"></div>
       </div>
       <div class="preview-actions">
+        <button class="btn btn-teal" id="editBtn">Edit</button>
         <button class="btn btn-accent" id="copyBtn">Copy report</button>
       </div>
       <div class="copied-flag" id="copiedFlag">Copied to clipboard</div>
@@ -272,11 +296,38 @@ const fields = ['date','platform','currency','player','regTime','signupIp',
   'balanceLabel','balance','todayDeposit','todayWithdrawal','todayWinLose',
   'gameName','turnover','gameWinLose','bettingRange','behavior','linkage','sharedAttrs'];
 
-function fmtDate(isoVal){
-  if (!isoVal) return '';
-  const parts = isoVal.split('-');
-  if (parts.length !== 3) return isoVal;
-  return `${parts[0]}/${parts[1]}/${parts[2]}`;
+let editMode = false;
+let ipGeo = null;
+let ipDebounceTimer = null;
+
+function fmtDate(val){
+  // Date fields are now free-typed/pasted text already kept in YYYY/MM/DD form.
+  return (val || '').trim();
+}
+
+function formatDateInput(el){
+  // Auto-inserts slashes as the user types or pastes digits (e.g. 20250601 -> 2025/06/01,
+  // and also normalizes pasted "2025-06-01" or "2025.06.01" into the same shape).
+  let digits = el.value.replace(/\D/g,'').slice(0,8);
+  let out = digits;
+  if (digits.length > 4) out = digits.slice(0,4) + '/' + digits.slice(4,6);
+  if (digits.length > 6) out = digits.slice(0,4) + '/' + digits.slice(4,6) + '/' + digits.slice(6,8);
+  el.value = out;
+}
+
+function attachDatePicker(textId, pickerId, btnSelector){
+  const textEl = $(textId);
+  const pickerEl = $(pickerId);
+  pickerEl.addEventListener('change', () => {
+    if (pickerEl.value) {
+      const [y,m,d] = pickerEl.value.split('-');
+      textEl.value = `${y}/${m}/${d}`;
+      if (!editMode) render();
+    }
+  });
+  document.querySelector(btnSelector).addEventListener('click', () => {
+    if (pickerEl.showPicker) { pickerEl.showPicker(); } else { pickerEl.click(); }
+  });
 }
 
 function filterNumeric(el){
@@ -293,6 +344,15 @@ function esc(s){
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+function getIpDisplayValue(){
+  const raw = $('signupIp').value.trim();
+  if (raw && ipGeo && (ipGeo.city || ipGeo.country)) {
+    const parts = [ipGeo.city, ipGeo.country].filter(Boolean).join(', ');
+    return `${raw} (${parts})`;
+  }
+  return raw;
+}
+
 function line(label, value, colonSpace){
   const v = value && value.trim() ? esc(value.trim()) : '';
   const sep = colonSpace ? ' :' : ':';
@@ -300,15 +360,10 @@ function line(label, value, colonSpace){
   return `<span class="lbl">${esc(label)}${sep}</span> ${valHtml}`;
 }
 
-function rawLine(label, value, colonSpace){
-  const v = value && value.trim() ? value.trim() : '';
-  const sep = colonSpace ? ' :' : ':';
-  return `${label}${sep} ${v}`;
-}
-
 function render(){
+  if (editMode) return; // don't clobber manual edits to the output while editing
   const balLabel = $('balanceLabel').value.trim() || 'Balance';
-  const ipVal = $('signupIp').value.trim();
+  const ipVal = getIpDisplayValue();
 
   const htmlLines = [
     line('Date', fmtDate($('date').value), false),
@@ -340,54 +395,77 @@ function render(){
   $('output').innerHTML = htmlLines.join('\n');
 }
 
-function buildPlainText(){
-  const balLabel = $('balanceLabel').value.trim() || 'Balance';
-  const ipVal = $('signupIp').value.trim();
-  const rows = [
-    rawLine('Date', fmtDate($('date').value), false),
-    rawLine('Platform', $('platform').value, false),
-    rawLine('Currency', $('currency').value, false),
-    '',
-    rawLine('Player', $('player').value, false),
-    rawLine('Registration Time', fmtDate($('regTime').value), true),
-    rawLine('Sign Up IP', ipVal, true),
-    rawLine('Total Deposit', $('totalDeposit').value, true),
-    rawLine('Total Withdrawal', $('totalWithdrawal').value, true),
-    rawLine('Total bonus', $('totalBonus').value, true),
-    rawLine('Win/Lose', $('lifetimeWinLose').value, true),
-    '',
-    rawLine(balLabel, $('balance').value, true),
-    rawLine('Today Deposit', $('todayDeposit').value, true),
-    rawLine('Today Withdrawals', $('todayWithdrawal').value, true),
-    rawLine('Today Win/Lose', $('todayWinLose').value, true),
-    '',
-    rawLine('Game name', $('gameName').value, true),
-    rawLine('Turnover', $('turnover').value, true),
-    rawLine('Win/Lose', $('gameWinLose').value, true),
-    rawLine('Betting range', $('bettingRange').value, true),
-    rawLine('Player Behavior', $('behavior').value, true),
-    '',
-    rawLine('Account linkage', $('linkage').value.trim() || 'None', true),
-    rawLine('Shared attributes', $('sharedAttrs').value.trim() || 'None', false),
-  ];
-  return rows.join('\n');
+async function lookupSignupIp(ip){
+  const infoEl = $('ipInfo');
+  infoEl.className = 'ip-info pending';
+  infoEl.textContent = 'Looking up...';
+  try {
+    const res = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
+    const data = await res.json();
+    if (data && data.success) {
+      ipGeo = { city: data.city || '', country: data.country || '' };
+      infoEl.className = 'ip-info';
+      infoEl.textContent = [ipGeo.city || 'Unknown city', ipGeo.country || 'Unknown country'].join(', ');
+    } else {
+      ipGeo = null;
+      infoEl.className = 'ip-info error';
+      infoEl.textContent = data && data.message ? data.message : 'Location not found';
+    }
+  } catch (e) {
+    ipGeo = null;
+    infoEl.className = 'ip-info error';
+    infoEl.textContent = 'Lookup failed (network/ad-blocker)';
+  }
+  if (!editMode) render();
 }
 
 fields.forEach(id => {
   const el = $(id);
   el.addEventListener('input', () => {
     if (el.classList.contains('num')) filterNumeric(el);
-    render();
+    if (id === 'date' || id === 'regTime') formatDateInput(el);
+    if (id === 'signupIp') {
+      ipGeo = null;
+      clearTimeout(ipDebounceTimer);
+      const val = el.value.trim();
+      if (val) {
+        $('ipInfo').className = 'ip-info';
+        $('ipInfo').textContent = '';
+        ipDebounceTimer = setTimeout(() => lookupSignupIp(val), 600);
+      } else {
+        $('ipInfo').className = 'ip-info';
+        $('ipInfo').textContent = '';
+      }
+    }
+    if (!editMode) render();
   });
+});
+
+attachDatePicker('date', 'date_picker', '.cal-btn[data-target="date"]');
+attachDatePicker('regTime', 'regTime_picker', '.cal-btn[data-target="regTime"]');
+
+$('editBtn').addEventListener('click', () => {
+  editMode = !editMode;
+  const out = $('output');
+  out.contentEditable = editMode ? 'true' : 'false';
+  out.classList.toggle('editing', editMode);
+  $('editBtn').textContent = editMode ? 'Done' : 'Edit';
+  if (editMode) {
+    out.focus();
+  }
 });
 
 $('clearBtn').addEventListener('click', () => {
   fields.forEach(id => $(id).value = (id === 'balanceLabel' ? 'Balance' : ''));
+  ipGeo = null;
+  $('ipInfo').className = 'ip-info';
+  $('ipInfo').textContent = '';
+  if (editMode) { editMode = false; $('output').contentEditable = 'false'; $('output').classList.remove('editing'); $('editBtn').textContent = 'Edit'; }
   render();
 });
 
 $('copyBtn').addEventListener('click', () => {
-  const text = buildPlainText();
+  const text = $('output').innerText;
   navigator.clipboard.writeText(text).then(() => {
     const flag = $('copiedFlag');
     flag.classList.add('show');
@@ -417,7 +495,7 @@ setInterval(tickClock, 1000);
 
 if (!$('date').value) {
   const d = new Date();
-  $('date').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  $('date').value = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
 }
 
 render();
