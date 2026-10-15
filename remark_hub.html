@@ -1290,13 +1290,21 @@
         "Hi team upon checking this account is for further checking. Wait for our superior decision. Thank you - rs__",
     ];
 
+    // Email → RS number overrides (for logins that don't follow the rsXX@ pattern)
+    const RS_OVERRIDES = {
+        "marcusrs@casinomcw.com": "rs44",
+        // "manalu-email@casinomcw.com": "rsXX",   // <- add more here
+    };
+
     function getSessionRS() {
         try {
             const raw = localStorage.getItem('secure_auth_session');
             if (!raw) return null;
             const s = JSON.parse(raw);
-            // Extract username part before @  e.g. "rs45@casinomcw.com" → "rs45"
-            return (s.email || '').split('@')[0].trim() || null;
+            const email = (s.email || '').trim().toLowerCase();
+            if (RS_OVERRIDES[email]) return RS_OVERRIDES[email];
+            // Fallback: username part before @  e.g. "rs45@casinomcw.com" → "rs45"
+            return email.split('@')[0].trim() || null;
         } catch { return null; }
     }
 
